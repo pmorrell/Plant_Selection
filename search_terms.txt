@@ -1,0 +1,14 @@
+balancing selection
+hard sweep
+negative selection
+polygenic selection
+positive selection
+purifying selection
+selective sweep
+soft sweep
+select* coefficient
+GO enrichment
+introgression
+adaptive introgression
+hybridization
+
