@@ -1,14 +1,21 @@
+Fst
+GO enrichment
+Kst
+adaptive introgression
 balancing selection
+common garden
+deleterious substitution
+deleterious variants
 hard sweep
+hybridization
+introgression
+mutational load
 negative selection
+nucleotide diversity
+nucleotide polymorphism
 polygenic selection
 positive selection
 purifying selection
+select* coefficient
 selective sweep
 soft sweep
-select* coefficient
-GO enrichment
-introgression
-adaptive introgression
-hybridization
-
