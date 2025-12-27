@@ -107,7 +107,7 @@ printf "%-40s | %s\n" "Search Term" "Papers Found"
 printf "%-40s-+-%s\n" "----------------------------------------" "------------"
 
 # Sort terms by count (descending) and then alphabetically
-for term in "${(@k)term_counts}"; do
+for term in "${(k)term_counts[@]}"; do
   printf "%s\t%d\n" "$term" "${term_counts[$term]}"
 done | sort -t$'\t' -k2,2nr -k1,1 | while IFS=$'\t' read -r term count; do
   printf "%-40s | %12d\n" "$term" "$count"

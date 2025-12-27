@@ -1,47 +1,28 @@
-# Plant_selection
-Code for identifying features of the plant resequencing literature
+# Review of literature covering selection in plants
 
-## Step 01
-We are performing a literature search for all papers related to whole genome population
-genetic studies of plants. 
+## Primary goals
+- Identify publications reporting whole genome resequencing in plants
+- Find how frequently various types of selection are reported
+- Identify details of this reporting, including mentions of selection coefficients and genes involved
+- Summarize quantitative results
+
+## Challenges
+- No single search term can identify studies focused on plants resequencing
+- For both licensing and tractability reasons, searching text (Markdown) versions of manuscripts is most efficient
+- 
+
+## Searching the literature
+- We focus on PubMed searches because [elinks][1] provides easy access to HTML versions of papers in the public domain
+- Searching with any term can trigger [MeSH][2] terms. This is usually useful, but we have many terms we don't want to include, like plastid sequences or exome capture.
+- The [elink][3] tool finds similar papers. We generated a curated list of paper PubMed IDs (PMIDs) that are typical of the type of papers we'd like to find, then use these as "seeds" to find related papers. Papers that match multiple seeds are more likely to be on topic. 
+- The script [pubmed_elink.sh][4] implements this strategy, but we ultimately need a list of PMIDs to exclude and a list of search terms we do and do not want to include. 
 
 
-journal article[pt]
-AND (
-      plant[tiab] OR plants[tiab]
-   OR crop[tiab] OR crops[tiab]
-   OR "crop plant"[tiab] OR "crop species"[tiab]
-   OR domestication[tiab] OR "domesticated plant"[tiab]
-)
-AND (
-      resequenc*
-   OR "re-sequenc*"
-   OR "whole-genome sequenc*"
-   OR "whole genome sequenc*"
-)
-AND (
-      "balancing selection"[tiab]
-   OR "hard sweep"[tiab]
-   OR "negative selection"[tiab]
-   OR "polygenic selection"[tiab]
-   OR "positive selection"[tiab]
-   OR "purifying selection"[tiab]
-   OR "selective sweep"[tiab]
-   OR "soft sweep"[tiab]
-   OR "selection coefficient"[tiab]
-   OR "adaptive introgression"[tiab]
-   OR selection[tiab]
-)
-NOT Animals[MeSH Terms]
-NOT Humans[MeSH Terms]
-NOT Vertebrates[MeSH Terms]
-NOT (
-      assembly[tiab]
-   OR "genome assembly"[tiab]
-   OR "de novo"[tiab]
-   OR review[pt]
-   OR editorial[pt]
-   OR comment[pt]
-)
 
+
+
+[1]: https://www.ncbi.nlm.nih.gov/books/NBK25501/
+[2]: https://pubmed.ncbi.nlm.nih.gov/help/#using-mesh-database
+
+[4]: 
 

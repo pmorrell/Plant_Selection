@@ -1,21 +1,48 @@
+Annovar
 Fst
 GO enrichment
-Kst
+Qst
+Variant Effect Predictor
 adaptive introgression
+ancestral recombination graph
 balancing selection
+chromosomal inversion
+chromosome inversion
 common garden
 deleterious substitution
 deleterious variants
+diversifying selection
+environmental association
+genetic load
+gene ontology
+genotype environment association
 hard sweep
+Hill-Robertson
 hybridization
 introgression
+landscape genomics
+linked selection
+linkage drag
 mutational load
+mutation rate
 negative selection
 nucleotide diversity
 nucleotide polymorphism
+omnigenic
+partial sweep
+plant adaptation
+polygenic adaptation
 polygenic selection
+polygenic trait
+pooled sequence
+pooled sequencing
 positive selection
 purifying selection
-select* coefficient
+selection coefficient
+selective coefficient
 selective sweep
+sequence diversity
+SNP annotation
+snpeff
 soft sweep
+tree sequence
