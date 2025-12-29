@@ -166,7 +166,7 @@ COMPARATIVE_PATTERNS="${COMPARATIVE_PATTERNS:-variant|polymorphism|SNP|indel|SV|
 COMPARATIVE_BOOST="${COMPARATIVE_BOOST:-1.15}"
 EXCL_PT="${EXCL_PT:-Review|Editorial|Letter|Meta-Analysis|News|Comment}"
 POS_PATTERNS="${POS_PATTERNS:-whole[ -]?genome|WGS|resequenc}"
-REQUIRE_POS="${REQUIRE_POS:-0}"
+REQUIRE_POS="${REQUIRE_POS:-1}"
 BATCH_SIZE="${BATCH_SIZE:-200}"
 
 # Build list of candidate PMIDs
@@ -183,17 +183,30 @@ if [ ${#pmids_all[@]} -gt 0 ]; then
         # Join batch PMIDs into comma-separated list for efetch
         ids=$(printf "%s\n" "${batch[@]}" | tr -d '"' | paste -sd , -)
         # Fetch XML and extract fields (PMID, Title, Abstract, PublicationTypes)
+        batch_file="$OUTPUT_DIR/batch_$i.txt"
         set +e
         efetch -db pubmed -id "$ids" -format xml 2>/dev/null | \
         xtract -pattern PubmedArticle \
                -element MedlineCitation/PMID \
                -element Article/ArticleTitle \
                -element Article/Abstract/AbstractText \
-               -element Article/PublicationTypeList/PublicationType > "$OUTPUT_DIR/batch_$i.txt"
+               -element Article/PublicationTypeList/PublicationType > "$batch_file"
+        fetch_status=$?
         set -e
+        
+        # Skip batch if efetch failed or file is empty
+        if [ $fetch_status -ne 0 ] || [ ! -s "$batch_file" ]; then
+            log "Warning: Batch $i failed to fetch or is empty, skipping these PMIDs"
+            rm -f "$batch_file"
+            continue
+        fi
+        
         # Process batch results (this while loop is NOT in a subshell - reading from file)
         while IFS=$'\t' read -r pid title abstract pubtypes; do
             pid=$(printf "%s" "$pid" | tr -d '"')
+            # Skip empty lines
+            [[ -z "$pid" ]] && continue
+            
             content="${title} ${abstract}"
             # Track comparative evidence for optional boost later
             if echo "$content" | grep -E -iq "$COMPARATIVE_PATTERNS"; then
@@ -209,12 +222,12 @@ if [ ${#pmids_all[@]} -gt 0 ]; then
                 fi
             fi
             # Exclude unwanted publication types
-            if echo "$pubtypes" | grep -E -iq "$EXCL_PT"; then
+            if [[ -n "$pubtypes" ]] && echo "$pubtypes" | grep -E -iq "$EXCL_PT"; then
                 echo "$pid" >> "$pmids_to_remove_file"
                 continue
             fi
             # Exclude if negative patterns present
-            if echo "$content" | grep -E -iq "$NEG_PATTERNS"; then
+            if [[ -n "$content" ]] && echo "$content" | grep -E -iq "$NEG_PATTERNS"; then
                 echo "$pid" >> "$pmids_to_remove_file"
                 continue
             fi
@@ -225,8 +238,8 @@ if [ ${#pmids_all[@]} -gt 0 ]; then
                     continue
                 fi
             fi
-        done < "$OUTPUT_DIR/batch_$i.txt"
-        rm -f "$OUTPUT_DIR/batch_$i.txt"
+        done < "$batch_file"
+        rm -f "$batch_file"
         # Be kind to servers
         sleep 0.5
     done
