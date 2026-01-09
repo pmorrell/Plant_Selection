@@ -109,9 +109,56 @@ for src in "${files[@]}"; do
   out="${OUTPUT_DIR}/${rel_dir}/${name}.md"
 
   log "Converting: $src -> $out"
-  if ! pandoc -f html -t gfm -o "$out" "$src"; then
-    log "Error: pandoc failed for $src"
+  
+  # Get input file size for validation
+  src_size=$(stat -f%z "$src" 2>/dev/null || stat -c%s "$src" 2>/dev/null || echo "0")
+  
+  # Detect if this is a JATS/PMC XML file (common for PubMed Central articles)
+  input_format="html"
+  if head -5 "$src" | grep -q "pmc-articleset\|jats\|article xmlns"; then
+    input_format="jats"
+    log "Detected JATS/PMC XML format for $src"
+  fi
+  
+  # Run pandoc with fail-if-warnings for stricter error handling
+  if ! pandoc -f "$input_format" -t gfm --fail-if-warnings -o "$out" "$src" 2>/dev/null; then
+    # Try again without --fail-if-warnings in case warnings are acceptable
+    log "Warning: pandoc reported warnings for $src, attempting without strict mode..."
+    if ! pandoc -f "$input_format" -t gfm -o "$out" "$src"; then
+      log "Error: pandoc failed for $src"
+      continue
+    fi
+  fi
+  
+  # Validate output file exists and has content
+  if [[ ! -f "$out" ]]; then
+    log "Error: output file not created for $src"
     continue
+  fi
+  
+  out_size=$(stat -f%z "$out" 2>/dev/null || stat -c%s "$out" 2>/dev/null || echo "0")
+  
+  if (( out_size == 0 )); then
+    log "Error: output file is empty for $src"
+    continue
+  fi
+  
+  # Check if output is suspiciously small (less than 10% of input size)
+  # This often indicates conversion issues with complex HTML
+  if (( src_size > 0 )); then
+    ratio=$((out_size * 100 / src_size))
+    if (( ratio < 10 )); then
+      log "Warning: output file ($out_size bytes) is suspiciously small compared to input ($src_size bytes) for $src"
+      log "Warning: conversion may be incomplete - please verify $out manually"
+    fi
+  fi
+  
+  # Count lines to ensure we have substantial content
+  line_count=$(wc -l < "$out" | tr -d ' ')
+  if (( line_count < 50 )); then
+    log "Warning: output file has very few lines ($line_count) for $src - conversion may be incomplete"
+  elif (( line_count < 100 )); then
+    log "Info: output file has $line_count lines for $src (typical files have 400+)"
   fi
 
   # Remove bibliography / references section: find first line that begins with
