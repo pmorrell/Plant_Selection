@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-setopt errexit nounset pipefail
+setopt errexit nounset pipefail extendedglob
 
 # Script to search for terms in markdown files and report counts
 # Usage: ./search_terms.sh [--dry-run|-n] <directory_with_markdown_files> <terms_file>
@@ -42,20 +42,38 @@ if [ ! -f "$TERMS_FILE" ]; then
   exit 1
 fi
 
-# Read search terms from file (one per line) into an array, trimming blanks
+# Read search terms from file (one per line) into arrays
+# Format: "Display Name: pattern1|pattern2|pattern3"
 log "Reading search terms from: $TERMS_FILE"
-SEARCH_TERMS=()
+typeset -a DISPLAY_NAMES
+typeset -a SEARCH_PATTERNS
+
 while IFS= read -r line || [[ -n $line ]]; do
-  # Trim leading/trailing whitespace
-  term="${line##+([[:space:]])}"
-  term="${term%%+([[:space:]])}"
-  if [[ -n "$term" ]]; then
-    SEARCH_TERMS+=("$term")
+  # Trim leading/trailing whitespace using sed
+  line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  
+  # Skip empty lines and comments
+  if [[ -z "$line" || "$line" =~ ^# ]]; then
+    continue
+  fi
+  
+  # Require format "Display Name: patterns"
+  if [[ "$line" =~ ^([^:]+):(.+)$ ]]; then
+    display_name="${match[1]}"
+    display_name=$(echo "$display_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    patterns="${match[2]}"
+    patterns=$(echo "$patterns" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    DISPLAY_NAMES+=("$display_name")
+    SEARCH_PATTERNS+=("$patterns")
+  else
+    log "Warning: Skipping line without 'Name: pattern' format: $line"
   fi
 done < "$TERMS_FILE"
 
-if [ ${#SEARCH_TERMS[@]} -eq 0 ]; then
+if [ ${#DISPLAY_NAMES[@]} -eq 0 ]; then
   log "Error: No search terms found in $TERMS_FILE"
+  log "Expected format: 'Display Name: pattern1|pattern2|pattern3'"
   exit 1
 fi
 
@@ -74,25 +92,42 @@ if [ "$TOTAL_FILES" -eq 0 ]; then
 fi
 
 log "Searching $TOTAL_FILES markdown files in: $MARKDOWN_DIR"
-log "Searching for ${#SEARCH_TERMS[@]} terms"
+log "Searching for ${#DISPLAY_NAMES[@]} term groups"
 
 # Create associative array to store counts (zsh syntax)
 typeset -A term_counts
 
-# Search for each term
-for term in "${SEARCH_TERMS[@]}"; do
-  if (( DRY_RUN )); then
-    log "Files matching term: '$term'"
-    # Print matching files (unique)
-    grep -ril --include="*.md" -F -e "$term" "$MARKDOWN_DIR" 2>/dev/null | sort -u || true
-  else
-    # Use grep to find files containing the term (case-insensitive, fixed string)
-    # Make grep failure non-fatal (no matches -> exit code 1), so append '|| true'
-    count=$(grep -ril --include="*.md" -F -e "$term" "$MARKDOWN_DIR" 2>/dev/null | sort -u | wc -l | tr -d ' ' || true)
-    if [[ -z "$count" ]]; then
-      count=0
+# Search for each term group
+for i in {1..${#DISPLAY_NAMES[@]}}; do
+  display_name="${DISPLAY_NAMES[$i]}"
+  patterns="${SEARCH_PATTERNS[$i]}"
+  
+  # Split patterns by | and collect unique matching files
+  typeset -A matched_files
+  
+  # Split on | using parameter expansion, then trim each
+  for pattern in "${(@s.|.)patterns}"; do
+    # Trim whitespace from pattern using sed
+    pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    
+    # Skip empty patterns
+    [[ -z "$pattern" ]] && continue
+    
+    if (( DRY_RUN )); then
+      log "Files matching pattern: '$pattern' (group: '$display_name')"
+      grep -rilw --include="*.md" -i -e "$pattern" "$MARKDOWN_DIR" 2>/dev/null || true
+    else
+      # Find files matching this pattern and store them (case-insensitive, whole word)
+      while IFS= read -r file; do
+        matched_files[$file]=1
+      done < <(grep -rilw --include="*.md" -i -e "$pattern" "$MARKDOWN_DIR" 2>/dev/null || true)
     fi
-    term_counts[$term]=$count
+  done
+  
+  if (( ! DRY_RUN )); then
+    # Count unique files
+    count=${#matched_files[@]}
+    term_counts[$display_name]=$count
   fi
 done
 

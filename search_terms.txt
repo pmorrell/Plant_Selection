@@ -1,48 +1,36 @@
-Annovar
-Fst
-GO enrichment
-Qst
-Variant Effect Predictor
-adaptive introgression
-ancestral recombination graph
-balancing selection
-chromosomal inversion
-chromosome inversion
-common garden
-deleterious substitution
-deleterious variants
-diversifying selection
-environmental association
-genetic load
-gene ontology
-genotype environment association
-hard sweep
-Hill-Robertson
-hybridization
-introgression
-landscape genomics
-linked selection
-linkage drag
-mutational load
-mutation rate
-negative selection
-nucleotide diversity
-nucleotide polymorphism
-omnigenic
-partial sweep
-plant adaptation
-polygenic adaptation
-polygenic selection
-polygenic trait
-pooled sequence
-pooled sequencing
-positive selection
-purifying selection
-selection coefficient
-selective coefficient
-selective sweep
-sequence diversity
-SNP annotation
-snpeff
-soft sweep
-tree sequence
+Fst: Fst
+Go terms: GO enrichment|gene ontology
+GWAS: GWAS|genome wide association|genome-wide association
+SNP: single nucleotide polymorphism|SNP|single nucleotide variant
+Qst: Qst
+adaptive introgression: adaptive introgression
+ancestral recombination graph: ancestral recombination graph|ARG
+balancing selection: balanced selection|balancing selection
+chromosome inversion: chromosomal inversion|chromosome inversion
+common garden: common garden
+deleterious variants: deleterious variants|deleterious substitution
+diversifying selection: diversifying selection
+environmental association: genotype environment association|landscape genomics
+genetic load: genetic load|mutational load
+hard sweep: hard sweep
+Hill-Robertson: Hill-Robertson
+hybridization: hybridization
+introgression: introgression
+linked selection: linked selection
+linkage drag: linkage drag
+mutation rate: mutation rate|substitution rate
+nucleotide diversity: nucleotide diversity
+nucleotide polymorphism: nucleotide polymorphism
+omnigenic: omnigenic
+partial sweep: partial sweep| partial selective sweep
+plant adaptation: plant adaptation
+polygenic adaptation: polygenic adaptation|polygenic selection|polygenic trait
+pooled sequencing: pooled sequence|pooled sequencing
+positive selection: positive selection
+purifying selection: purifying selection|negative selection
+selection coefficient: selection coefficient|selective coefficient
+selective sweep: selective sweep
+sequence diversity: sequence diversity
+SNP annotation: SNP annotation|snpeff|SnpEff|Annovar|VeP|Variant Effect Predictor
+soft sweep: soft sweep
+tree sequence: tree sequence

@@ -1,10 +1,11 @@
 #!/usr/bin/env zsh -l
 
-# Small zsh script to convert HTML/HTM files to Markdown using pandoc.
-# Usage: pandoc_Markdown.sh [WORK_DIR] [OUTPUT_DIR] [HTML_FILES...]
-#   WORK_DIR   - directory to search for HTML files (default: current directory)
+# zsh script to convert XML/HTML files to Markdown using pandoc.
+# Particularly useful for JATS/PMC XML files (PubMed Central articles).
+# Usage: pandoc_Markdown.sh [WORK_DIR] [OUTPUT_DIR] [FILES...]
+#   WORK_DIR   - directory to search for XML/HTML files (default: current directory)
 #   OUTPUT_DIR - directory to write Markdown files (default: $WORK_DIR/output)
-# If no HTML_FILES are provided, the script will recursively find all .html/.htm files
+# If no FILES are provided, the script will recursively find all .xml/.html/.htm files
 # under WORK_DIR and convert them while preserving relative paths.
 
 set -e
@@ -18,15 +19,16 @@ log() {
 
 usage() {
   cat <<EOF
-Usage: $0 [WORK_DIR] [OUTPUT_DIR] [HTML_FILES...]
+Usage: $0 [WORK_DIR] [OUTPUT_DIR] [FILES...]
 
-Converts HTML/HTM files to Markdown using pandoc. If no HTML files are provided,
-the script will recursively convert all .html and .htm files under WORK_DIR.
+Converts XML/HTML files to Markdown using pandoc. Detects JATS/PMC XML format
+automatically. If no files are provided, the script will recursively convert all
+.xml, .html, and .htm files under WORK_DIR.
 
 Positional arguments:
-  WORK_DIR    Directory to search for HTML files (default: current directory)
+  WORK_DIR    Directory to search for XML/HTML files (default: current directory)
   OUTPUT_DIR  Directory to place Markdown output (default: WORK_DIR/output)
-  HTML_FILES  Optional list of HTML files (paths or globs). If provided, only
+  FILES       Optional list of files (paths or globs). If provided, only
               those files are converted.
 
 Examples:
@@ -74,14 +76,14 @@ if (( $# > 0 )); then
     fi
   done
 else
-  # Find all .html/.htm files recursively under WORK_DIR (preserve relative paths)
+  # Find all .xml/.html/.htm files recursively under WORK_DIR (preserve relative paths)
   while IFS= read -r -d $'\0' f; do
     files+=("$f")
-  done < <(find "$WORK_DIR" -type f \( -iname '*.html' -o -iname '*.htm' \) -print0)
+  done < <(find "$WORK_DIR" -type f \( -iname '*.xml' -o -iname '*.html' -o -iname '*.htm' \) -print0)
 fi
 
 if (( ${#files[@]} == 0 )); then
-  log "No HTML/HTM files found to convert. Exiting."
+  log "No XML/HTML files found to convert. Exiting."
   exit 0
 fi
 

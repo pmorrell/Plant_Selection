@@ -1,13 +1,58 @@
 #!/bin/bash
-# pmc_download.sh — download PMC HTML for a list of PMIDs by resolving to PMCIDs first
+# pmc_download.sh — download PMC XML for a list of PMIDs by resolving to PMCIDs first
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [ID_FILE] [OUTPUT_DIR]
+
+Download PMC XML files for a list of PMIDs or PMCIDs.
+
+Options:
+  --pmcid          Treat ID_FILE as PMCIDs (skip PMID resolution)
+  -h, --help       Show this help message
+
+Arguments:
+  ID_FILE      Input file with IDs (default: ./candidates_ranked.txt)
+               Format: one ID per line, or tab-separated with ID first
+  OUTPUT_DIR   Directory for downloaded XML files (default: ./pmc_html)
+
+Environment Variables:
+  RATE_DELAY      Seconds between requests (default: 0.34 ~3 req/sec)
+  SKIP_HEADER     Skip first N lines of input (default: 1)
+  FETCH_TIMEOUT   Timeout per fetch in seconds (default: 30)
+
+Examples:
+  $(basename "$0") ./candidates_min4_seeds.txt ./pmc_results
+  $(basename "$0") --pmcid ./pmcid_list.txt ./pmc_results
+  RATE_DELAY=0.5 $(basename "$0")
+
+EOF
+    exit "${1:-0}"
+}
+
+[[ "$*" == *"-h"* ]] || [[ "$*" == *"--help"* ]] && usage
 
 set -euo pipefail
 
-PMID_FILE="${1:-./candidates_ranked.txt}"  # Input: tab/line separated PMIDs (default: ranked file)
-OUTPUT_DIR="${2:-./pmc_html}"              # Output: directory for HTML files
+# Parse options
+USE_PMCID=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --pmcid)
+            USE_PMCID=1
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+PMID_FILE="${1:-./candidates_ranked.txt}"  # Input: IDs (PMIDs or PMCIDs)
+OUTPUT_DIR="${2:-./pmc_html}"              # Output: directory for XML files
 RATE_DELAY="${RATE_DELAY:-0.34}"           # ~3 req/sec without API key
 SKIP_HEADER="${SKIP_HEADER:-1}"            # Skip first line of input (default: 1)
-FETCH_TIMEOUT="${FETCH_TIMEOUT:-30}"       # Seconds to wait per HTML fetch
+FETCH_TIMEOUT="${FETCH_TIMEOUT:-90}"       # Seconds to wait per XML fetch
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -93,7 +138,7 @@ phase2_download_html() {
         [[ -z "$pmcid" ]] && continue
         total=$((total+1))
         local out
-        out="$output_dir/${pmcid}.html"
+        out="$output_dir/${pmcid}.xml"
         
         # Skip if already exists and has content
         if [[ -s "$out" ]]; then
@@ -106,9 +151,19 @@ phase2_download_html() {
         
         echo "[$total] Downloading $pmcid (PMID $pmid)..." >&2
         
-        # Fetch XML format (PMC returns JATS XML, not HTML)
+        # Fetch full format to get complete article content
         # Note: efetch needs "PMC" prefix for pmc database IDs
-        efetch -db pmc -id "PMC${pmcid}" -format xml > "$out" 2>/dev/null
+        efetch -db pmc -id "PMC${pmcid}" -format full > "$out" 2>/dev/null
+        
+        # Check if file has publisher restriction
+        if grep -q "publisher of this article does not allow" "$out" 2>/dev/null; then
+            mkdir -p "$output_dir/restricted"
+            mv "$out" "$output_dir/restricted/${pmcid}.xml"
+            echo "  ⚠ Publisher restriction (moved to restricted/)" >&2
+            fail_count=$((fail_count+1))
+            rate_sleep "$rate_delay"
+            continue
+        fi
         
         if [[ -s "$out" ]]; then
             ok_count=$((ok_count+1))
@@ -128,8 +183,24 @@ phase2_download_html() {
 # Main
 mapping_file="$OUTPUT_DIR/.pmid_to_pmcid.txt"
 
-# Phase 1: Skip if mapping file already exists with content
-if [[ -s "$mapping_file" ]]; then
+# Phase 1: Skip if using PMCIDs directly or if mapping file already exists with content
+if (( USE_PMCID )); then
+    echo "[Phase 1] Skipping - using PMCIDs directly" >&2
+    # Create a simple mapping file: PMCID -> PMCID (no PMID)
+    : > "$mapping_file"
+    line_no=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line_no=$((line_no+1))
+        if (( line_no <= SKIP_HEADER )); then
+            continue
+        fi
+        line="${line//$'\r'/}"
+        pmcid="${line%%$'\t'*}"
+        [[ -n "$pmcid" ]] && printf "%s\t%s\n" "$pmcid" "$pmcid" >> "$mapping_file"
+    done < "$PMID_FILE"
+    mapped=$(wc -l < "$mapping_file" | tr -d ' ')
+    echo "[Phase 1] Loaded $mapped PMCIDs" >&2
+elif [[ -s "$mapping_file" ]]; then
     mapped=$(wc -l < "$mapping_file" | tr -d ' ')
     echo "[Phase 1] Skipping - using existing mapping file with $mapped entries" >&2
     echo "           (Delete $mapping_file to regenerate)" >&2

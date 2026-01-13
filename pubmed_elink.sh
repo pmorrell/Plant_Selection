@@ -396,17 +396,6 @@ log ""
 # Create output files with different thresholds
 log "=== OUTPUT FILES ===" 
 
-# Ensure scores are populated (fallback recompute if needed)
-for pmid in $(keys candidate_seeds); do
-    if [[ -z "${candidate_scores[$pmid]}" ]]; then
-        seed_list="${candidate_seeds[$pmid]}"
-        [[ -z "$seed_list" ]] && continue
-        typeset -a seeds_arr
-        seeds_arr=(${(s:,:)seed_list})
-        candidate_scores["$pmid"]=${#seeds_arr[@]}
-    fi
-done
-
 # Debug: check if scores exist
 debug_count=0
 for pmid in $(keys candidate_scores); do
